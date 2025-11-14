@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 10:47:27 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/13 13:38:15 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/14 18:10:59 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 # include <fcntl.h>
 # include <string.h>
 # include <math.h>
-# include <mlx.h>
+# include "minilibx-linux/mlx.h"
 # include "get_next_line/get_next_line.h"
 
 # define HEIGHT 980
@@ -29,13 +29,13 @@
 # define MOVE_SPEED 0.1
 # define ROT_SPEED 0.05
 
-# define KEY_W      13
-# define KEY_A      0
-# define KEY_S      1
-# define KEY_D      2
-# define KEY_LEFT   123
-# define KEY_RIGHT  124
-# define KEY_ESC    53
+# define KEY_W        119   // 'w'
+# define KEY_A        97    // 'a'
+# define KEY_S        115   // 's'
+# define KEY_D        100   // 'd'
+# define KEY_LEFT     65361 // Left arrow
+# define KEY_RIGHT    65363 // Right arrow
+# define KEY_ESC      65307 // Escape
 
 typedef struct s_keys
 {
@@ -151,11 +151,11 @@ char    *creat_text(int fd, char *str);
 char    *get_current_line(char *line);
 char    *next_list(char *text);
 char    *get_next_line(int fd);
-
+size_t	ft_strlen(char *s);
 /* String utilities */
 char    *ft_substr(char *s, unsigned int start, size_t len);
 char    *ft_strdup(char *s1);
-char    *ft_strchr(const char *s, int c);
+char    *ft_strchr(char *s, int c);
 char    *ft_strjoin(char *s1, char *s2);
 size_t  ft_strlen(char *s);
 char    **ft_split(char *s, char c);

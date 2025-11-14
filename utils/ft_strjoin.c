@@ -6,13 +6,14 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 13:09:51 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/09/13 13:45:52 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/14 15:14:33 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../cub.h"
 
-char	* ft_strjoin(char *s1, char *s2)
+
+char	*ft_strjoin(char *s1, char *s2)
 {
 	size_t	i;
 	char	*str;
@@ -37,5 +38,6 @@ char	* ft_strjoin(char *s1, char *s2)
 	while (s2[i])
 		str[j++] = s2[i++];
 	str[j] = '\0';
+	free (s1);
 	return (str);
 }

@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 10:47:10 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/13 15:19:20 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/14 18:12:25 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,14 +37,32 @@ int main(int ac, char **av)
 		fprintf(stderr, "Error: Invalid colors\n");
 		return (EXIT_FAILURE);
 	}
-	if (!pars_map(&cub))
-	{
-		fprintf(stderr, "Error: Invalid map\n");
-		return (EXIT_FAILURE);
-	}
+	// if (!pars_map(&cub))
+	// {
+	// 	fprintf(stderr, "Error: Invalid map\n");
+	// 	return (EXIT_FAILURE);
+	// }
 	change_space(&cub);
 	// Split map into 2D array for raycasting
-	cub.map_lines = ft_split(cub.map, '\n');
+	// cub.map_lines = ft_split(cub.map, '\n');
+	char *map_line2[] = {
+    "        1111111111111111111111111",
+    "        1000000000110000000000001",
+    "        1011000001110000000000001",
+    "        1001000000000000000000001",
+    "111111111011000001110000000000001",
+    "100000000011000001110111110111111",
+    "11110111111111011100000010001",
+    "11110111111111011101010010001",
+    "11000000110101011100000010001",
+    "10000000000000001100000010001",
+    "10000000000000001101010010001",
+    "11000001110101011111011110N0111",
+    "11110111 1110101 101111010001",
+    "11111111 1111111 111111111111",
+    NULL
+};
+	cub.map_lines = map_line2;
 	if (!cub.map_lines)
 	{
 		fprintf(stderr, "Error: Failed to split map\n");
@@ -67,7 +85,7 @@ int main(int ac, char **av)
 	cub.floor_color = 0x573D32;
 	cub.ceiling_color = 0x87CEEB;  // RGB for sky blue
 	mlx_initcub(&cub);
-	
+
 	// Clean up (won't reach here because mlx_loop is infinite)
 	// free_all(&cub);
 	return (0);

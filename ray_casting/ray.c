@@ -5,246 +5,475 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/11/11 12:52:51 by omaezzem          #+#    #+#             */
-/*   Updated: 2025/11/14 13:06:23 by omaezzem         ###   ########.fr       */
+/*   Created: 2025/11/14 18:21:54 by omaezzem          #+#    #+#             */
+/*   Updated: 2025/11/14 18:22:02 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../cub.h"
-
-#include "../cub.h"
+#include <SDL2/SDL.h>
 #include <math.h>
+#include <stdbool.h>
+#include <float.h>
 
-// -------------------------
-// Player Initialization
-// -------------------------
-void	init_player_raycasting(t_cub *cub)
+#define TILE_SIZE 64
+#define MAP_NUM_ROWS 11
+#define MAP_NUM_COLS 15
+#define WINDOW_WIDTH (MAP_NUM_COLS * TILE_SIZE)
+#define WINDOW_HEIGHT (MAP_NUM_ROWS * TILE_SIZE)
+#define FOV_ANGLE (60 * (M_PI / 180))
+#define WALL_STRIP_WIDTH 1
+#define NUM_RAYS (WINDOW_WIDTH / WALL_STRIP_WIDTH)
+
+typedef struct s_map
 {
-	char	o = cub->map_lines[cub->player_pos.y][cub->player_pos.x];
+	int	grid[MAP_NUM_ROWS][MAP_NUM_COLS];
+}	t_map;
 
-	cub->player.pos_x = cub->player_pos.x + 0.5;
-	cub->player.pos_y = cub->player_pos.y + 0.5;
+typedef struct s_player
+{
+	float	x;
+	float	y;
+	float	radius;
+	int		turn_direction;
+	int		walk_direction;
+	float	rotation_angle;
+	float	move_speed;
+	float	rotation_speed;
+}	t_player;
 
-	if (o == 'N')
-		cub->player.angle = 3 * M_PI / 2; // (3 * 180) / 2 = 270
- 	else if (o == 'S')
-		cub->player.angle = M_PI / 2; // 180 / 2 = 90
-	else if (o == 'E')
-		cub->player.angle = 0; // 0
-	else if (o == 'W')
-		cub->player.angle = M_PI; // 180 
+typedef struct s_ray
+{
+	float	ray_angle;
+	float	wall_hit_x;
+	float	wall_hit_y;
+	float	distance;
+	bool	was_hit_vertical;
+	bool	is_ray_facing_down;
+	bool	is_ray_facing_up;
+	bool	is_ray_facing_right;
+	bool	is_ray_facing_left;
+}	t_ray;
+
+typedef struct s_game
+{
+	t_map			map;
+	t_player		player;
+	t_ray			rays[NUM_RAYS];
+	SDL_Window		*window;
+	SDL_Renderer	*renderer;
+	bool			running;
+}	t_game;
+
+void	init_map_data(t_game *game)
+{
+	int	grid_data[MAP_NUM_ROWS][MAP_NUM_COLS];
+	int	i;
+	int	j;
+
+	grid_data[0] = (int[]){1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+	grid_data[1] = (int[]){1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1};
+	grid_data[2] = (int[]){1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1};
+	grid_data[3] = (int[]){1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
+	grid_data[4] = (int[]){1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1};
+	grid_data[5] = (int[]){1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1};
+	grid_data[6] = (int[]){1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+	grid_data[7] = (int[]){1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+	grid_data[8] = (int[]){1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1};
+	grid_data[9] = (int[]){1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+	grid_data[10] = (int[]){1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+	i = -1;
+	while (++i < MAP_NUM_ROWS)
+	{
+		j = -1;
+		while (++j < MAP_NUM_COLS)
+			game->map.grid[i][j] = grid_data[i][j];
+	}
+}
+
+bool	has_wall_at(t_game *game, float x, float y)
+{
+	int	map_grid_index_x;
+	int	map_grid_index_y;
+
+	if (x < 0 || x > WINDOW_WIDTH || y < 0 || y > WINDOW_HEIGHT)
+		return (true);
+	map_grid_index_x = (int)floor(x / TILE_SIZE);
+	map_grid_index_y = (int)floor(y / TILE_SIZE);
+	return (game->map.grid[map_grid_index_y][map_grid_index_x] != 0);
+}
+
+void	render_map_tile(t_game *game, int i, int j)
+{
+	int			tile_x;
+	int			tile_y;
+	SDL_Rect	rect;
+
+	tile_x = j * TILE_SIZE;
+	tile_y = i * TILE_SIZE;
+	if (game->map.grid[i][j] == 1)
+		SDL_SetRenderDrawColor(game->renderer, 34, 34, 34, 255);
 	else
+		SDL_SetRenderDrawColor(game->renderer, 255, 255, 255, 255);
+	rect = (SDL_Rect){tile_x, tile_y, TILE_SIZE, TILE_SIZE};
+	SDL_RenderFillRect(game->renderer, &rect);
+	SDL_SetRenderDrawColor(game->renderer, 34, 34, 34, 255);
+	SDL_RenderDrawRect(game->renderer, &rect);
+}
+
+void	render_map(t_game *game)
+{
+	int	i;
+	int	j;
+
+	i = -1;
+	while (++i < MAP_NUM_ROWS)
 	{
-		ft_putstr_fd("Error: invalid player orientation\n", 2);
-		exit(EXIT_FAILURE);
+		j = -1;
+		while (++j < MAP_NUM_COLS)
+			render_map_tile(game, i, j);
 	}
 }
 
-// -------------------------
-// Texture loading (same)
-// -------------------------
-void	load_textures(t_cub *cub)
+void	init_player(t_game *game)
 {
-	cub->tex_north.img = NULL;
-	cub->tex_south.img = NULL;
-	cub->tex_east.img = NULL;
-	cub->tex_west.img = NULL;
-	printf("Skipping textures - using solid colors\n");
+	game->player.x = WINDOW_WIDTH / 2;
+	game->player.y = WINDOW_HEIGHT / 2;
+	game->player.radius = 3;
+	game->player.turn_direction = 0;
+	game->player.walk_direction = 0;
+	game->player.rotation_angle = M_PI / 2;
+	game->player.move_speed = 2.0;
+	game->player.rotation_speed = 2 * (M_PI / 180);
 }
 
-void	load_texture(t_cub *cub, t_texture *tex, char *path)
+void	update_player(t_game *game)
 {
-	tex->img = mlx_xpm_file_to_image(cub->mlx, path, 
-		&tex->width, &tex->height);
-	if (!tex->img)
+	float	move_step;
+	float	new_player_x;
+	float	new_player_y;
+
+	game->player.rotation_angle += game->player.turn_direction
+		* game->player.rotation_speed;
+	move_step = game->player.walk_direction * game->player.move_speed;
+	new_player_x = game->player.x + cos(game->player.rotation_angle)
+		* move_step;
+	new_player_y = game->player.y + sin(game->player.rotation_angle)
+		* move_step;
+	if (!has_wall_at(game, new_player_x, new_player_y))
 	{
-		ft_putstr_fd("Error\nFailed to load texture: ", 2);
-		ft_putstr_fd(path, 2);
-		ft_putstr_fd("\n", 2);
-		exit(EXIT_FAILURE);
+		game->player.x = new_player_x;
+		game->player.y = new_player_y;
 	}
-	tex->addr = mlx_get_data_addr(tex->img, &tex->bpp, 
-		&tex->line_len, &tex->endian);
 }
 
-// -------------------------
-// Drawing helpers
-// -------------------------
-void	my_mlx_pixel_put(t_cub *cub, int x, int y, int color)
+void	render_player(t_game *game)
 {
-	char	*dst;
+	SDL_Rect	rect;
 
-	if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT)
-		return;
-	dst = cub->addr + (y * cub->line_len + x * (cub->bpp / 8));
-	*(unsigned int *)dst = color;
+	SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 255);
+	rect = (SDL_Rect){
+		(int)(game->player.x - game->player.radius),
+		(int)(game->player.y - game->player.radius),
+		(int)(game->player.radius * 2),
+		(int)(game->player.radius * 2)
+	};
+	SDL_RenderFillRect(game->renderer, &rect);
 }
- //drawing skyyy =============
-void	draw_ceiling(t_cub *cub)
-{
-	int x;
-	int y;
 
-	y = 0;
-	while (y < HEIGHT)
+float	normalize_angle(float angle)
+{
+	angle = fmod(angle, 2 * M_PI);
+	if (angle < 0)
+		angle = (2 * M_PI) + angle;
+	return (angle);
+}
+
+float	distance_between_points(float x1, float y1, float x2, float y2)
+{
+	return (sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)));
+}
+
+void	init_horz_intersection(t_game *game, t_ray *ray, float *xintercept,
+		float *yintercept)
+{
+	*yintercept = floor(game->player.y / TILE_SIZE) * TILE_SIZE;
+	*yintercept += ray->is_ray_facing_down ? TILE_SIZE : 0;
+	*xintercept = game->player.x + (*yintercept - game->player.y)
+		/ tan(ray->ray_angle);
+}
+
+void	calc_horz_steps(t_ray *ray, float *xstep, float *ystep)
+{
+	*ystep = TILE_SIZE;
+	*ystep *= ray->is_ray_facing_up ? -1 : 1;
+	*xstep = TILE_SIZE / tan(ray->ray_angle);
+	*xstep *= (ray->is_ray_facing_left && *xstep > 0) ? -1 : 1;
+	*xstep *= (ray->is_ray_facing_right && *xstep < 0) ? -1 : 1;
+}
+
+bool	find_horz_wall_hit(t_game *game, t_ray *ray, float *horz_wall_hit_x,
+		float *horz_wall_hit_y)
+{
+	float	xintercept;
+	float	yintercept;
+	float	xstep;
+	float	ystep;
+	float	next_x;
+	float	next_y;
+
+	init_horz_intersection(game, ray, &xintercept, &yintercept);
+	calc_horz_steps(ray, &xstep, &ystep);
+	next_x = xintercept;
+	next_y = yintercept;
+	while (next_x >= 0 && next_x <= WINDOW_WIDTH && next_y >= 0
+		&& next_y <= WINDOW_HEIGHT)
 	{
-		x = 0;
-		while (x < WIDTH)
+		if (has_wall_at(game, next_x, next_y - (ray->is_ray_facing_up ? 1 : 0)))
 		{
-			my_mlx_pixel_put(cub, x, y, cub->ceiling_color);
-			x++;
+			*horz_wall_hit_x = next_x;
+			*horz_wall_hit_y = next_y;
+			return (true);
 		}
-		y++;
+		next_x += xstep;
+		next_y += ystep;
 	}
+	return (false);
 }
-// =============================
 
-
-
-// drawing flooor ===========
-void	draw_floor(t_cub *cub)
+void	init_vert_intersection(t_game *game, t_ray *ray, float *xintercept,
+		float *yintercept)
 {
-	int y;
-	int x;
+	*xintercept = floor(game->player.x / TILE_SIZE) * TILE_SIZE;
+	*xintercept += ray->is_ray_facing_right ? TILE_SIZE : 0;
+	*yintercept = game->player.y + (*xintercept - game->player.x)
+		* tan(ray->ray_angle);
+}
 
-	y = HEIGHT / 2;
-	while (y < HEIGHT)
+void	calc_vert_steps(t_ray *ray, float *xstep, float *ystep)
+{
+	*xstep = TILE_SIZE;
+	*xstep *= ray->is_ray_facing_left ? -1 : 1;
+	*ystep = TILE_SIZE * tan(ray->ray_angle);
+	*ystep *= (ray->is_ray_facing_up && *ystep > 0) ? -1 : 1;
+	*ystep *= (ray->is_ray_facing_down && *ystep < 0) ? -1 : 1;
+}
+
+bool	find_vert_wall_hit(t_game *game, t_ray *ray, float *vert_wall_hit_x,
+		float *vert_wall_hit_y)
+{
+	float	xintercept;
+	float	yintercept;
+	float	xstep;
+	float	ystep;
+	float	next_x;
+	float	next_y;
+
+	init_vert_intersection(game, ray, &xintercept, &yintercept);
+	calc_vert_steps(ray, &xstep, &ystep);
+	next_x = xintercept;
+	next_y = yintercept;
+	while (next_x >= 0 && next_x <= WINDOW_WIDTH && next_y >= 0
+		&& next_y <= WINDOW_HEIGHT)
 	{
-		x = 0;
-		while (x < WIDTH)
+		if (has_wall_at(game, next_x - (ray->is_ray_facing_left ? 1 : 0), next_y))
 		{
-			my_mlx_pixel_put(cub, x, y, cub->floor_color);
-			x++;
+			*vert_wall_hit_x = next_x;
+			*vert_wall_hit_y = next_y;
+			return (true);
 		}
-		y++;
+		next_x += xstep;
+		next_y += ystep;
 	}
+	return (false);
 }
-// ==============================
 
-// -------------------------
-// Ray initialization (angle-based)
-// -------------------------
-void	init_ray(t_cub *cub, t_ray *ray, int x)
+void	set_ray_hit_data(t_game *game, t_ray *ray, float horz_dist,
+		float vert_dist)
 {
-	double	ray_angle;
+	float	horz_x;
+	float	horz_y;
+	float	vert_x;
+	float	vert_y;
 
-	// Calculate the angle for this ray
-	ray_angle = cub->player.angle - (FOV / 2.0) + ((double)x / WIDTH) * FOV;
-	// 270 - (60 / 2) = 240 
-	ray->ray_dir_x = cos(ray_angle); // cos(240) = 0.3
-	ray->ray_dir_y = sin(ray_angle); // sin(240) = 0.9
+	find_horz_wall_hit(game, ray, &horz_x, &horz_y);
+	find_vert_wall_hit(game, ray, &vert_x, &vert_y);
+	ray->wall_hit_x = (horz_dist < vert_dist) ? horz_x : vert_x;
+	ray->wall_hit_y = (horz_dist < vert_dist) ? horz_y : vert_y;
+	ray->distance = (horz_dist < vert_dist) ? horz_dist : vert_dist;
+	ray->was_hit_vertical = (vert_dist < horz_dist);
+}
 
-	ray->map_x = (int)cub->player.pos_x;
-	ray->map_y = (int)cub->player.pos_y;
+void	cast_ray(t_game *game, t_ray *ray)
+{
+	float	horz_wall_hit_x;
+	float	horz_wall_hit_y;
+	float	vert_wall_hit_x;
+	float	vert_wall_hit_y;
+	float	horz_hit_distance;
+	float	vert_hit_distance;
+	bool	found_horz;
+	bool	found_vert;
 
-	ray->delta_dist_x = fabs(1 / ray->ray_dir_x);
-	ray->delta_dist_y = fabs(1 / ray->ray_dir_y);
-	ray->hit = 0;
-
-	if (ray->ray_dir_x < 0)
-	{
-		ray->step_x = -1;
-		ray->side_dist_x = (cub->player.pos_x - ray->map_x) * ray->delta_dist_x;
-	}
+	found_horz = find_horz_wall_hit(game, ray, &horz_wall_hit_x,
+			&horz_wall_hit_y);
+	found_vert = find_vert_wall_hit(game, ray, &vert_wall_hit_x,
+			&vert_wall_hit_y);
+	if (found_horz)
+		horz_hit_distance = distance_between_points(game->player.x,
+				game->player.y, horz_wall_hit_x, horz_wall_hit_y);
 	else
-	{
-		ray->step_x = 1;
-		ray->side_dist_x = (ray->map_x + 1.0 - cub->player.pos_x) * ray->delta_dist_x;
-	}
-	if (ray->ray_dir_y < 0)
-	{
-		ray->step_y = -1;
-		ray->side_dist_y = (cub->player.pos_y - ray->map_y) * ray->delta_dist_y;
-	}
+		horz_hit_distance = FLT_MAX;
+	if (found_vert)
+		vert_hit_distance = distance_between_points(game->player.x,
+				game->player.y, vert_wall_hit_x, vert_wall_hit_y);
 	else
+		vert_hit_distance = FLT_MAX;
+	set_ray_hit_data(game, ray, horz_hit_distance, vert_hit_distance);
+}
+
+void	init_ray_directions(t_ray *ray)
+{
+	ray->is_ray_facing_down = ray->ray_angle > 0 && ray->ray_angle < M_PI;
+	ray->is_ray_facing_up = !ray->is_ray_facing_down;
+	ray->is_ray_facing_right = ray->ray_angle < 0.5 * M_PI
+		|| ray->ray_angle > 1.5 * M_PI;
+	ray->is_ray_facing_left = !ray->is_ray_facing_right;
+}
+
+void	cast_all_rays(t_game *game)
+{
+	float	ray_angle;
+	int		i;
+
+	ray_angle = game->player.rotation_angle - (FOV_ANGLE / 2);
+	i = -1;
+	while (++i < NUM_RAYS)
 	{
-		ray->step_y = 1;
-		ray->side_dist_y = (ray->map_y + 1.0 - cub->player.pos_y) * ray->delta_dist_y;
+		game->rays[i].ray_angle = normalize_angle(ray_angle);
+		init_ray_directions(&game->rays[i]);
+		cast_ray(game, &game->rays[i]);
+		ray_angle += FOV_ANGLE / NUM_RAYS;
 	}
 }
 
-// -------------------------
-// DDA, Wall distance & drawing (same logic)
-// -------------------------
-void	perform_dda(t_cub *cub, t_ray *ray)
+void	render_rays(t_game *game)
 {
-	while (ray->hit == 0)
+	int	i;
+
+	SDL_SetRenderDrawColor(game->renderer, 255, 0, 0, 76);
+	i = -1;
+	while (++i < NUM_RAYS)
 	{
-		if (ray->side_dist_x < ray->side_dist_y)
-		{
-			ray->side_dist_x += ray->delta_dist_x;
-			ray->map_x += ray->step_x;
-			ray->side = 0;
-		}
-		else
-		{
-			ray->side_dist_y += ray->delta_dist_y;
-			ray->map_y += ray->step_y;
-			ray->side = 1;
-		}
-		if (cub->map_lines[ray->map_y][ray->map_x] == '1')
-			ray->hit = 1;
+		SDL_RenderDrawLine(game->renderer,
+			(int)game->player.x, (int)game->player.y,
+			(int)game->rays[i].wall_hit_x, (int)game->rays[i].wall_hit_y);
 	}
 }
 
-void	calculate_wall_distance(t_cub *cub, t_ray *ray)
+void	handle_keydown(t_game *game, SDL_Keycode key)
 {
-	if (ray->side == 0)
-		ray->perp_wall_dist = (ray->map_x - cub->player.pos_x + 
-			(1 - ray->step_x) / 2) / ray->ray_dir_x;
-	else
-		ray->perp_wall_dist = (ray->map_y - cub->player.pos_y + 
-			(1 - ray->step_y) / 2) / ray->ray_dir_y;
-	
-	ray->line_height = (int)(HEIGHT / ray->perp_wall_dist);
-	ray->draw_start = -ray->line_height / 2 + HEIGHT / 2;
-	if (ray->draw_start < 0)
-		ray->draw_start = 0;
-	ray->draw_end = ray->line_height / 2 + HEIGHT / 2;
-	if (ray->draw_end >= HEIGHT)
-		ray->draw_end = HEIGHT - 1;
+	if (key == SDLK_UP)
+		game->player.walk_direction = 1;
+	else if (key == SDLK_DOWN)
+		game->player.walk_direction = -1;
+	else if (key == SDLK_RIGHT)
+		game->player.turn_direction = 1;
+	else if (key == SDLK_LEFT)
+		game->player.turn_direction = -1;
+	else if (key == SDLK_ESCAPE)
+		game->running = false;
 }
 
-void	draw_wall(t_cub *cub, t_ray *ray, int x)
+void	handle_keyup(t_game *game, SDL_Keycode key)
 {
-	int	y;
-	int	color;
-
-	if (ray->side == 0 && ray->ray_dir_x > 0)
-		color = 0xFF0000; // East
-	else if (ray->side == 0 && ray->ray_dir_x < 0)
-		color = 0x00FF00; // West
-	else if (ray->side == 1 && ray->ray_dir_y > 0)
-		color = 0x0000FF; // South
-	else
-		color = 0xFFFF00; // North
-	
-	if (ray->side == 1)
-		color = (color >> 1) & 8355711;
-	for (y = ray->draw_start; y < ray->draw_end; y++)
-		my_mlx_pixel_put(cub, x, y, color);
+	if (key == SDLK_UP || key == SDLK_DOWN)
+		game->player.walk_direction = 0;
+	else if (key == SDLK_RIGHT || key == SDLK_LEFT)
+		game->player.turn_direction = 0;
 }
 
-// -------------------------
-// Frame drawing
-// -------------------------
-void	draw_frame(t_cub *cub)
+void	handle_events(t_game *game)
 {
-	int		x;
-	t_ray	ray;
+	SDL_Event	e;
 
-	cub->img = mlx_new_image(cub->mlx, WIDTH, HEIGHT);
-	cub->addr = mlx_get_data_addr(cub->img, &cub->bpp, &cub->line_len, &cub->endian);
-	draw_ceiling(cub);
-	draw_floor(cub);
-
-	for (x = 0; x < WIDTH; x++)
+	while (SDL_PollEvent(&e))
 	{
-		init_ray(cub, &ray, x);
-		perform_dda(cub, &ray);
-		calculate_wall_distance(cub, &ray);
-		draw_wall(cub, &ray, x);
+		if (e.type == SDL_QUIT)
+			game->running = false;
+		else if (e.type == SDL_KEYDOWN)
+			handle_keydown(game, e.key.keysym.sym);
+		else if (e.type == SDL_KEYUP)
+			handle_keyup(game, e.key.keysym.sym);
 	}
-	mlx_put_image_to_window(cub->mlx, cub->window, cub->img, 0, 0);
-	mlx_destroy_image(cub->mlx, cub->img);
+}
+
+void	update_game(t_game *game)
+{
+	update_player(game);
+	cast_all_rays(game);
+}
+
+void	render_game(t_game *game)
+{
+	SDL_SetRenderDrawColor(game->renderer, 0, 0, 0, 255);
+	SDL_RenderClear(game->renderer);
+	render_map(game);
+	render_rays(game);
+	render_player(game);
+	SDL_RenderPresent(game->renderer);
+}
+
+void	game_loop(t_game *game)
+{
+	while (game->running)
+	{
+		handle_events(game);
+		update_game(game);
+		render_game(game);
+		SDL_Delay(16);
+	}
+}
+
+bool	init_sdl(t_game *game)
+{
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		return (false);
+	game->window = SDL_CreateWindow("Raycasting Engine",
+			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+	if (!game->window)
+		return (false);
+	game->renderer = SDL_CreateRenderer(game->window, -1,
+			SDL_RENDERER_ACCELERATED);
+	if (!game->renderer)
+		return (false);
+	return (true);
+}
+
+void	cleanup_sdl(t_game *game)
+{
+	if (game->renderer)
+		SDL_DestroyRenderer(game->renderer);
+	if (game->window)
+		SDL_DestroyWindow(game->window);
+	SDL_Quit();
+}
+
+int	main(void)
+{
+	t_game	game;
+
+	game.window = NULL;
+	game.renderer = NULL;
+	game.running = true;
+	if (!init_sdl(&game))
+	{
+		cleanup_sdl(&game);
+		return (1);
+	}
+	init_map_data(&game);
+	init_player(&game);
+	game_loop(&game);
+	cleanup_sdl(&game);
+	return (0);
 }

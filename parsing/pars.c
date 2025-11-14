@@ -6,21 +6,11 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/27 09:36:42 by omaezzem          #+#    #+#             */
-/*   Updated: 2025/11/11 13:53:22 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/14 15:52:20 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../cub.h"
-
-size_t ft_strlen(char *str)
-{
-	int i = 0;
-	while (str[i])
-	{
-		i++;
-	}
-	return i;
-}
 
 void init_cub(t_cub *cub)
 {
@@ -112,10 +102,12 @@ int is_path(char **split, t_cub *cub, char *line)
 		return (1);
 	else
 	{
-	if (cub->NO != 1 || cub->SO != 1 || cub->WE != 1 || cub->EA != 1 ||
-		cub->F != 1 || cub->C != 1)
-		return (0);
-		cub->map = ft_strjoin(cub->map, line);
+		if (cub->NO != 1 || cub->SO != 1 || cub->WE != 1 || cub->EA != 1 ||
+			cub->F != 1 || cub->C != 1)
+		{
+			return (0);
+			cub->map = ft_strjoin(cub->map, line);
+		}
 	}
 	return (1);
 }
