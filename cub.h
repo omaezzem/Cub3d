@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   cub.h                                              :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/08/03 10:47:27 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/14 18:10:59 by omaezzem         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #ifndef CUB_H
 #define CUB_H
 
@@ -57,30 +45,25 @@ typedef struct s_vector
 
 typedef struct s_player
 {
-    double  pos_x;      // Player position (world coords)
+    double  pos_x;
     double  pos_y;
-    double  angle;      // Player viewing angle in radians (0 = east, PI/2 = south, etc.)
+    double  angle;
 }   t_player;
 
 typedef struct s_ray
 {
-    double  camera_x;      // X-coordinate in camera space ([-1,1])
-    double  ray_dir_x;     // Ray direction (computed from angle)
-    double  ray_dir_y;
-    int     map_x;         // Current square of the map
-    int     map_y;
-    double  side_dist_x;   // Distance to next x or y side
-    double  side_dist_y;
-    double  delta_dist_x;  // Distance between x/y sides along ray
-    double  delta_dist_y;
-    double  perp_wall_dist;// Perpendicular distance to wall
-    int     step_x;        // Step direction (-1 or +1)
-    int     step_y;
-    int     hit;           // Was a wall hit?
-    int     side;          // NS or EW wall hit?
-    int     line_height;   // Height of line to draw
-    int     draw_start;    // Lowest pixel to fill for the stripe
-    int     draw_end;      // Highest pixel to fill for the stripe
+    float   rayAngle;
+    float   wallHitX;
+    float   wallHitY;
+    float   distance;
+    int     wasHitVertical;
+    int     isRayFacingDown;
+    int     isRayFacingUp;
+    int     isRayFacingRight;
+    int     isRayFacingLeft;
+    int     line_height;
+    int     draw_start;
+    int     draw_end;
 }   t_ray;
 
 typedef struct s_texture
@@ -183,29 +166,34 @@ void    failed_w(void);
 void    ft_putstr_fd(char *s, int fd);
 void    ft_putchar_fd(char c, int fd);
 
-/* Raycasting functions (angle-based) */
+/* Raycasting functions */
 void    init_player_raycasting(t_cub *cub);
 void    load_textures(t_cub *cub);
 void    load_texture(t_cub *cub, t_texture *tex, char *path);
 void    draw_frame(t_cub *cub);
-void    init_ray(t_cub *cub, t_ray *ray, int x);
-void    perform_dda(t_cub *cub, t_ray *ray);
-void    calculate_wall_distance(t_cub *cub, t_ray *ray);
+
+/* New raycasting core functions */
+void    ray_init(t_ray *ray, float rayAngle);
+void    ray_cast(t_ray *ray, t_player *p, char **map);
+void    cast_all_rays(t_cub *cub);
+int     map_has_wall_at(char **map, float x, float y);
 void    draw_wall(t_cub *cub, t_ray *ray, int x);
 int     get_texture_color(t_cub *cub, t_texture *tex, t_ray *ray, int y);
 void    my_mlx_pixel_put(t_cub *cub, int x, int y, int color);
 void    draw_ceiling(t_cub *cub);
 void    draw_floor(t_cub *cub);
 
+/* Utility functions */
+float   normalize_angle(float angle);
+float   distance_between_points(float x1, float y1, float x2, float y2);
+
 /* Input & movement helpers */
 int     key_press(int keycode, t_cub *cub);
 int     key_release(int keycode, t_cub *cub);
-void    handle_keys(t_cub *cub);            /* called every frame to apply movement */
-void    update_player(t_cub *cub);           /* update player position/angle from keys */
-void    move_player(t_cub *cub, double dir); /* dir = +1 forward, -1 backward */
-void    strafe_player(t_cub *cub, double dir); /* dir = +1 right, -1 left */
-void    rotate_player(t_cub *cub, double dir); /* dir = +1 right, -1 left */
+void    handle_keys(t_cub *cub);
+void    update_player(t_cub *cub);
+void    move_player(t_cub *cub, double dir);
+void    strafe_player(t_cub *cub, double dir);
+void    rotate_player(t_cub *cub, double dir);
 
-/* Utility */
-// static double normalize_angle(double angle);
 #endif /* CUB_H */
