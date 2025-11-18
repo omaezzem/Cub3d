@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 10:47:27 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/13 13:38:15 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/18 16:37:11 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,22 +20,24 @@
 # include <string.h>
 # include <math.h>
 # include <mlx.h>
+# include <stdbool.h>
 # include "get_next_line/get_next_line.h"
 
 # define HEIGHT 980
 # define WIDTH 1580
 # define FOV (M_PI / 3.0)   /* 60 degrees */
-
+# define T_SIZE 50
 # define MOVE_SPEED 0.1
 # define ROT_SPEED 0.05
 
-# define KEY_W      13
-# define KEY_A      0
-# define KEY_S      1
-# define KEY_D      2
-# define KEY_LEFT   123
-# define KEY_RIGHT  124
-# define KEY_ESC    53
+# define KEY_W        13
+# define KEY_A        0
+# define KEY_S        1
+# define KEY_D        2
+# define KEY_LEFT     123
+# define KEY_RIGHT    124
+# define KEY_ESC      53
+
 
 typedef struct s_keys
 {
@@ -55,32 +57,38 @@ typedef struct s_vector
     int *_y;
 }               t_vector;
 
+typedef struct s_casting
+{
+    double  h_distance;
+    double  v_distance;
+    double  h_hitx;
+    double  h_hity;
+    double  v_hitx;
+    double  v_hity;
+}           t_casting;
+
 typedef struct s_player
 {
     double  pos_x;      // Player position (world coords)
     double  pos_y;
+    bool    f_down;
+    bool    f_left;
+    bool    f_right;
+    bool    f_up;
+    double  intersection_x;
+    double  intersection_y;
     double  angle;      // Player viewing angle in radians (0 = east, PI/2 = south, etc.)
 }   t_player;
 
 typedef struct s_ray
 {
+    double  s_angle;
     double  camera_x;      // X-coordinate in camera space ([-1,1])
-    double  ray_dir_x;     // Ray direction (computed from angle)
-    double  ray_dir_y;
-    int     map_x;         // Current square of the map
+    int     map_x;       // Current square of the map
     int     map_y;
-    double  side_dist_x;   // Distance to next x or y side
-    double  side_dist_y;
-    double  delta_dist_x;  // Distance between x/y sides along ray
-    double  delta_dist_y;
-    double  perp_wall_dist;// Perpendicular distance to wall
-    int     step_x;        // Step direction (-1 or +1)
-    int     step_y;
-    int     hit;           // Was a wall hit?
-    int     side;          // NS or EW wall hit?
-    int     line_height;   // Height of line to draw
-    int     draw_start;    // Lowest pixel to fill for the stripe
-    int     draw_end;      // Highest pixel to fill for the stripe
+    double  o_angle;
+    double  distance_r;
+    t_player player;
 }   t_ray;
 
 typedef struct s_texture
@@ -144,6 +152,9 @@ typedef struct s_cub
 
     /* Keys */
     t_keys      keys;
+    t_ray       ray;
+    t_player player;
+    t_casting cast;
 }   t_cub;
 
 /* Get next line functions */
@@ -151,11 +162,10 @@ char    *creat_text(int fd, char *str);
 char    *get_current_line(char *line);
 char    *next_list(char *text);
 char    *get_next_line(int fd);
-
+size_t	ft_strlen(char *s);
 /* String utilities */
 char    *ft_substr(char *s, unsigned int start, size_t len);
 char    *ft_strdup(char *s1);
-char    *ft_strchr(const char *s, int c);
 char    *ft_strjoin(char *s1, char *s2);
 size_t  ft_strlen(char *s);
 char    **ft_split(char *s, char c);

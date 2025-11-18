@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/27 10:17:27 by omaezzem          #+#    #+#             */
-/*   Updated: 2025/11/13 13:37:59 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/18 17:02:04 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,7 +208,7 @@ void mlx_initcub(t_cub *cub)
     if (!cub->mlx)
         failed_mlx();
 
-    cub->window = mlx_new_window(cub->mlx, WIDTH, HEIGHT, "CUB3D");
+    cub->window = mlx_new_window(cub->mlx, WIDTH , HEIGHT, "CUB3D");
     if (!cub->window)
         failed_w();
 

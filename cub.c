@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 10:47:10 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/13 15:19:20 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/18 16:20:24 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,6 +64,8 @@ int main(int ac, char **av)
 	// load_textures(&cub);
 	
 	// Initialize MLX and start rendering
+	cub.player_pos.x *= T_SIZE;
+	cub.player_pos.y *= T_SIZE;
 	cub.floor_color = 0x573D32;
 	cub.ceiling_color = 0x87CEEB;  // RGB for sky blue
 	mlx_initcub(&cub);
