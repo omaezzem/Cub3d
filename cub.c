@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 10:47:10 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/18 16:20:24 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/25 13:21:37 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,34 +43,20 @@ int main(int ac, char **av)
 		return (EXIT_FAILURE);
 	}
 	change_space(&cub);
-	// Split map into 2D array for raycasting
 	cub.map_lines = ft_split(cub.map, '\n');
 	if (!cub.map_lines)
 	{
 		fprintf(stderr, "Error: Failed to split map\n");
 		return (EXIT_FAILURE);
 	}
-	
-	// Find player position
 	find_p(&cub);
-	printf("Player position: (%d, %d)\n", cub.player_pos.x, cub.player_pos.y);
 	
-	// ===== RAYCASTING SETUP =====
-	
-	// Initialize player for raycasting (convert from grid position to double)
+	// raycast=====================
 	init_player_raycasting(&cub);
-	
-	// Load textures
-	// load_textures(&cub);
-	
-	// Initialize MLX and start rendering
-	cub.player_pos.x *= T_SIZE;
-	cub.player_pos.y *= T_SIZE;
 	cub.floor_color = 0x573D32;
-	cub.ceiling_color = 0x87CEEB;  // RGB for sky blue
+	cub.ceiling_color = 0x87CEEB;
 	mlx_initcub(&cub);
-	
-	// Clean up (won't reach here because mlx_loop is infinite)
+
 	// free_all(&cub);
 	return (0);
 }

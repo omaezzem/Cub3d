@@ -6,11 +6,10 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/27 10:17:27 by omaezzem          #+#    #+#             */
-/*   Updated: 2025/11/18 17:02:04 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/25 15:29:18 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "cub.h"
 #include "cub.h"
 #include <math.h>
 
@@ -32,8 +31,8 @@ void move_forward(t_cub *cub)
     new_x = cub->player.pos_x + cos(cub->player.angle) * MOVE_SPEED;
     new_y = cub->player.pos_y + sin(cub->player.angle) * MOVE_SPEED;
 
-    /* Collision check (simple) */
-    if (cub->map_lines[(int)new_y][(int)new_x] != '1')
+    // Collision check in pixels, not map coordinates
+    if (!is_wall(cub, new_x, new_y))
     {
         cub->player.pos_x = new_x;
         cub->player.pos_y = new_y;
@@ -48,7 +47,7 @@ void move_backward(t_cub *cub)
     new_x = cub->player.pos_x - cos(cub->player.angle) * MOVE_SPEED;
     new_y = cub->player.pos_y - sin(cub->player.angle) * MOVE_SPEED;
 
-    if (cub->map_lines[(int)new_y][(int)new_x] != '1')
+    if (!is_wall(cub, new_x, new_y))
     {
         cub->player.pos_x = new_x;
         cub->player.pos_y = new_y;
@@ -59,12 +58,12 @@ void move_left(t_cub *cub)
 {
     double new_x;
     double new_y;
-    double side_angle = cub->player.angle - M_PI_2; /* left = angle - 90° */
+    double side_angle = cub->player.angle - M_PI_2;
 
     new_x = cub->player.pos_x + cos(side_angle) * MOVE_SPEED;
     new_y = cub->player.pos_y + sin(side_angle) * MOVE_SPEED;
 
-    if (cub->map_lines[(int)new_y][(int)new_x] != '1')
+    if (!is_wall(cub, new_x, new_y))
     {
         cub->player.pos_x = new_x;
         cub->player.pos_y = new_y;
@@ -75,12 +74,12 @@ void move_right(t_cub *cub)
 {
     double new_x;
     double new_y;
-    double side_angle = cub->player.angle + M_PI_2; /* right = angle + 90° */
+    double side_angle = cub->player.angle + M_PI_2;
 
     new_x = cub->player.pos_x + cos(side_angle) * MOVE_SPEED;
     new_y = cub->player.pos_y + sin(side_angle) * MOVE_SPEED;
 
-    if (cub->map_lines[(int)new_y][(int)new_x] != '1')
+    if (!is_wall(cub, new_x, new_y))
     {
         cub->player.pos_x = new_x;
         cub->player.pos_y = new_y;
@@ -97,7 +96,6 @@ void rotate_right(t_cub *cub)
     cub->player.angle = normalize_angle(cub->player.angle + ROT_SPEED);
 }
 
-/* render_frame now uses angle-based movement */
 int render_frame(t_cub *cub)
 {
     if (cub->keys.w)
@@ -175,15 +173,15 @@ void failed_mlx(void)
     exit(EXIT_FAILURE);
 }
 
-/* Mouse horizontal movement rotates the player angle */
+
 int mouse_move(int x, int y, t_cub *cub)
 {
     static int last_x = -1;
     int delta_x;
     double rotation;
-    const double sensitivity = 0.002; /* tune this */
+    const double sensitivity = 0.002;
 
-    (void)y; /* not used */
+    (void)y;
 
     if (last_x == -1)
     {
@@ -208,7 +206,7 @@ void mlx_initcub(t_cub *cub)
     if (!cub->mlx)
         failed_mlx();
 
-    cub->window = mlx_new_window(cub->mlx, WIDTH , HEIGHT, "CUB3D");
+    cub->window = mlx_new_window(cub->mlx, WIDTH, HEIGHT, "CUB3D");
     if (!cub->window)
         failed_w();
 

@@ -6,7 +6,7 @@
 /*   By: omaezzem <omaezzem@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/03 10:47:27 by mel-badd          #+#    #+#             */
-/*   Updated: 2025/11/18 16:37:11 by omaezzem         ###   ########.fr       */
+/*   Updated: 2025/11/25 15:55:38 by omaezzem         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,16 +27,30 @@
 # define WIDTH 1580
 # define FOV (M_PI / 3.0)   /* 60 degrees */
 # define T_SIZE 50
-# define MOVE_SPEED 0.1
+# define MOVE_SPEED 5
 # define ROT_SPEED 0.05
 
-# define KEY_W        13
-# define KEY_A        0
-# define KEY_S        1
-# define KEY_D        2
-# define KEY_LEFT     123
-# define KEY_RIGHT    124
-# define KEY_ESC      53
+#define KEY_W        13   // 'w'
+#define KEY_A        0    // 'a'
+#define KEY_S        1    // 's'
+#define KEY_D        2    // 'd'
+
+#define KEY_LEFT     123  // Left Arrow
+#define KEY_RIGHT    124  // Right Arrow
+
+#define KEY_ESC      53   // Escape
+
+typedef struct s_render
+{
+    int     i;
+    double  ray_angle;
+    double  distance;
+    double  corrected_distance;
+    double  wall_height;
+    double  wall_top;
+    double  projection_distance;
+    int     is_vertical;
+}   t_render;
 
 
 typedef struct s_keys
@@ -75,8 +89,14 @@ typedef struct s_player
     bool    f_left;
     bool    f_right;
     bool    f_up;
+    bool    stp_x;
+    bool    stp_y;
     double  intersection_x;
     double  intersection_y;
+    double  closer_dst_x;
+    double  closer_dst_y;
+    double  v_ok;
+    double  h_ok;
     double  angle;      // Player viewing angle in radians (0 = east, PI/2 = south, etc.)
 }   t_player;
 
@@ -88,6 +108,12 @@ typedef struct s_ray
     int     map_y;
     double  o_angle;
     double  distance_r;
+    double  feye_distance;
+    double  update_angle;
+    double  distance_projection_plan;
+    double  h_wall_projection;
+    double  wall_top;
+    double  corrected_distance;
     t_player player;
 }   t_ray;
 
@@ -112,8 +138,10 @@ typedef struct s_cub
     int         bpp;
     int         line_len;
     int         endian;
-    int         win_w;
-    int         win_h;
+    double      size_x;
+    double      size_y;
+    double      y_colom;
+    double      x_row;
 
     /* Map related */
     char        *map;
@@ -153,7 +181,6 @@ typedef struct s_cub
     /* Keys */
     t_keys      keys;
     t_ray       ray;
-    t_player player;
     t_casting cast;
 }   t_cub;
 
@@ -215,7 +242,7 @@ void    update_player(t_cub *cub);           /* update player position/angle fro
 void    move_player(t_cub *cub, double dir); /* dir = +1 forward, -1 backward */
 void    strafe_player(t_cub *cub, double dir); /* dir = +1 right, -1 left */
 void    rotate_player(t_cub *cub, double dir); /* dir = +1 right, -1 left */
-
+int is_wall(t_cub *cub, double x, double y);
 /* Utility */
 // static double normalize_angle(double angle);
 #endif /* CUB_H */
